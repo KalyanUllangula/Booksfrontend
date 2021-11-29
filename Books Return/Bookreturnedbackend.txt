@@ -1,0 +1,214 @@
+return service
+
+package com.service;
+
+import java.util.List;
+
+import com.dto.BooksReturnedDto;
+import com.entites.Author;
+import com.entites.BooksReturned;
+
+public interface BooksReturnedServ {
+	public BooksReturned returnBooks(BooksReturnedDto returned);
+	public BooksReturned updateReturnedBookDetails(BooksReturnedDto booksReturned) throws Throwable;
+	public List<BooksReturned> viewReturnedBooksList();
+	public BooksReturned viewReturnedBooksById(int id) throws Throwable;
+	public String deleteReturnBookDetails(int id) throws Throwable;
+
+}
+
+
+-------------------------------------------------------------------------------------------------------
+
+return servimpl
+
+package com.service;
+
+
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Supplier;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.advices.AuthorNotFoundException;
+import com.advices.BookNotFoundException;
+import com.dto.BooksReturnedDto;
+import com.entites.Author;
+import com.entites.Books;
+import com.entites.BooksReturned;
+import com.entites.Users;
+import com.repository.BooksRepository;
+import com.repository.BooksReturnedRepository;
+import com.repository.UsersRepository;
+@Service
+public class BooksReturnedServImp implements BooksReturnedServ{
+@Autowired
+BooksReturnedRepository repo;
+@Autowired
+UsersRepository userrepo;
+@Autowired
+BooksRepository booksrepo;
+	@Override
+	public BooksReturned returnBooks(BooksReturnedDto returned) {
+		BooksReturned r1=new BooksReturned();
+		r1.setId(returned.getId());
+		r1.setDelayedDays(returned.getDelayedDays());
+		r1.setPenalty(returned.getPenalty());
+		r1.setPenaltyStatus(returned.getPenaltyStatus());
+		r1.setReturnedDate(returned.getReturnedDate());
+		//Users user=new Users();
+		Optional<Users> user=userrepo.findById(returned.getUserid());
+	    Users u1=user.get();
+	    r1.setUsers(u1);
+	    Optional<Books> books=booksrepo.findById(returned.getBookid());
+	    Books b1=books.get();
+	    r1.setBooks(b1);
+		repo.save(r1);
+		return r1;
+	}
+
+	@Override
+	public BooksReturned updateReturnedBookDetails(BooksReturnedDto booksReturned) throws Throwable {
+		
+		Optional<BooksReturned> b = repo.findById(booksReturned.getId());
+        if(!b.isPresent()) {
+            throw new BookNotFoundException("Book not found with given id ");
+        }
+        BooksReturned std = b.get();
+        std.setDelayedDays(std.getDelayedDays());
+        std.setId(std.getId());
+        std.setPenalty(std.getPenalty());
+        std.setPenaltyStatus(std.getPenaltyStatus());
+        std.setReturnedDate(std.getReturnedDate());
+        repo.save(std);
+        return std;
+	
+	
+		/*
+		 * int rid = booksReturned.getId(); Supplier s1 = ()-> new
+		 * BookNotFoundException("Book not Returned"); BooksReturned b1 =
+		 * repo.findById(rid).orElseThrow(s1); //b1.setBooks(booksReturned.getBooks());
+		 * b1.setDelayedDays(booksReturned.getDelayedDays());
+		 * b1.setPenalty(booksReturned.getPenalty());
+		 * b1.setPenaltyStatus(booksReturned.getPenaltyStatus());
+		 * b1.setReturnedDate(booksReturned.getReturnedDate()); repo.save(b1);
+		 * 
+		 * return b1;
+		 */
+		
+	}
+
+	@Override
+	public List<BooksReturned> viewReturnedBooksList() {
+		 List<BooksReturned> lbr = repo.findAll();
+			return lbr;
+	}
+
+	@Override
+	public String deleteReturnBookDetails(int id) throws Throwable {
+		Supplier s1= ()->new BookNotFoundException("Book Does not returned");		
+		 BooksReturned br = repo.findById(id).orElseThrow(s1);
+		repo.delete(br);
+		return "deleted";
+	
+	}
+
+	@Override
+		public BooksReturned viewReturnedBooksById(int id) throws Throwable {
+			 Supplier s1= ()->new BookNotFoundException("Book Does not exist in the database");	
+			 BooksReturned b1=repo.findById(id).orElseThrow(s1);
+				return b1;
+		
+		}
+		
+	
+	}
+
+
+
+-------------------------------------------------------------------------------------------------------
+
+
+return controller
+
+package com.controller;
+
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.dto.BooksReturnedDto;
+import com.entites.Books;
+import com.entites.BooksIssued;
+import com.entites.BooksReturned;
+import com.service.BooksReturnedServImp;
+
+@RestController
+@RequestMapping("/lms")
+public class BooksReturnedCon {
+	@Autowired
+	BooksReturnedServImp bookreturnservice;
+	@PostMapping("/returnbooks")
+	public BooksReturned returnBooks(@RequestBody BooksReturnedDto returned)
+	{
+		 BooksReturned b1=bookreturnservice.returnBooks(returned);
+		  return b1;
+	}
+	@PutMapping("/updatereturnbdetails")
+	public ResponseEntity<BooksReturned> updateReturnedBookDetails(@RequestBody BooksReturnedDto booksReturned) throws Throwable
+	{
+         BooksReturned e1=bookreturnservice.updateReturnedBookDetails(booksReturned);
+		
+		ResponseEntity re=new ResponseEntity<BooksReturned>(e1,HttpStatus.OK);
+		return re;
+	}
+	@GetMapping("/viewbooklist")
+	public ResponseEntity<List<BooksReturned>> viewReturnedBooksList()
+	{
+		List<BooksReturned> v1=bookreturnservice.viewReturnedBooksList();
+		ResponseEntity re=new ResponseEntity<>(v1,HttpStatus.OK);
+		return re;
+
+	}
+	
+	@DeleteMapping("/deleteReturnBookDetails/{id}")
+	public ResponseEntity<String> deleteReturnBookDetails(@PathVariable int id) throws Throwable
+	{
+		bookreturnservice.deleteReturnBookDetails(id);
+		ResponseEntity re=new ResponseEntity<String>("Deleted",HttpStatus.OK);
+		return re;
+	}
+	
+	@GetMapping("/viewReturnedBooksById/{id}")
+	public ResponseEntity<BooksReturned> viewReturnedBooksById(@PathVariable int id) throws Throwable{
+		BooksReturned b1=bookreturnservice.viewReturnedBooksById(id);
+		ResponseEntity re=new ResponseEntity<BooksReturned>(b1,HttpStatus.OK);
+		return re;
+}
+}
+
+
+
+
+
+
+
+	
+	
+	
+
+
+
